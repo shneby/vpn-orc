@@ -2,7 +2,6 @@ package persistence
 
 type Peer struct {
 	Id        string `json:"id"`
-	Tenant    string `json:"tenant"`
 	Address   string `json:"address"`
 	PublicKey []byte `json:"publicKey"`
 }
@@ -10,4 +9,9 @@ type Peer struct {
 type Tenant struct {
 	Id      string `json:"id"`
 	Network string `json:"network"`
+}
+
+type OnboardingResponseDTO struct {
+	Address string `json:"address"`
+	Peers   []Peer `json:"peers"`
 }

@@ -27,21 +27,16 @@ func NewAddressPool(cidr string) (*AddressPool, error) {
 	}, nil
 }
 
-func (ap *AddressPool) AllocateAddress() (net.IP, error) {
+func (ap *AddressPool) AllocateAddress() (string, error) {
 	for ip := ap.network.IP.Mask(ap.network.Mask); ap.network.Contains(ip); incrementIP(ip) {
 		ipString := ip.String()
 		if !ap.used[ipString] {
 			ap.used[ipString] = true
-			return ip, nil
+			return ip.String(), nil
 		}
 	}
 
-	return nil, fmt.Errorf("no available addresses in the pool")
-}
-
-func (ap *AddressPool) ReturnAddress(ip net.IP) {
-	ipString := ip.String()
-	delete(ap.used, ipString)
+	return "", fmt.Errorf("no available addresses in the pool")
 }
 
 func incrementIP(ip net.IP) {
