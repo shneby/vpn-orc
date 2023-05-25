@@ -81,7 +81,7 @@ func (a *AddressService) AllocateAddress(tenantId int, peerId string, publicKey 
 	// todo: implement this
 
 	// send notification peer joined
-	defer a.notifier.NotifyConnected(peerDTO, peers)
+	a.notifier.NotifyConnected(peerDTO, peers)
 
 	// return address response with allocated address to peer
 	return &persistence.OnboardingResponse{

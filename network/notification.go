@@ -67,7 +67,6 @@ func notify(notification Notification, peers []persistence.Peer) error {
 		req.Header.Set("Authorization", "Bearer secret")
 
 		client := http.Client{Timeout: 3 * time.Second}
-		// send the request
 		res, err := client.Do(req)
 		if err != nil {
 			return fmt.Errorf("failed sending notificaiton request: %s", err)
