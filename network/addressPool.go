@@ -40,6 +40,12 @@ func (ap *AddressPool) AllocateAddress() (string, error) {
 	return "", fmt.Errorf("no available addresses in the pool")
 }
 
+func (ap *AddressPool) DeallocateAddress(address string) {
+	if ap.used[address] {
+		delete(ap.used, address)
+	}
+}
+
 func incrementIP(ip net.IP) {
 	for j := len(ip) - 1; j >= 0; j-- {
 		ip[j]++

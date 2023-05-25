@@ -8,8 +8,8 @@ import (
 
 type AddressService struct {
 	repo                  persistence.RepositoryInterface
+	notifier              NotificationInterface
 	tenantIdToAddressPool map[int]*AddressPool
-	// Notification service
 }
 
 type AddressInterface interface {
@@ -17,7 +17,7 @@ type AddressInterface interface {
 	RevokeAddress(tenantId int, peerId string) error
 }
 
-func NewAddressService(repo persistence.RepositoryInterface) AddressInterface {
+func NewAddressService(repo persistence.RepositoryInterface, notifier NotificationInterface) AddressInterface {
 	tenants, err := repo.ReadTenants()
 	if err != nil {
 		log.Fatalf("unable to retreive tenants from database - %s", err)
@@ -25,6 +25,7 @@ func NewAddressService(repo persistence.RepositoryInterface) AddressInterface {
 
 	service := &AddressService{
 		repo:                  repo,
+		notifier:              notifier,
 		tenantIdToAddressPool: make(map[int]*AddressPool),
 	}
 
@@ -51,6 +52,7 @@ func (a *AddressService) AllocateAddress(tenantId int, peerId string, publicKey 
 	}
 
 	// Check peer exists on tenant
+	// todo: change this to repo.peerExists() instead - more readable
 	peer, err := a.repo.ReadPeer(tenantId, peerId)
 	if peer != nil {
 		return nil, fmt.Errorf("peer %s already has an address", peer.Id)
@@ -79,7 +81,7 @@ func (a *AddressService) AllocateAddress(tenantId int, peerId string, publicKey 
 	// todo: implement this
 
 	// send notification peer joined
-	// todo: implement this
+	defer a.notifier.NotifyConnected(peerDTO, peers)
 
 	// return address response with allocated address to peer
 	return &persistence.OnboardingResponse{
@@ -93,6 +95,8 @@ func (a *AddressService) RevokeAddress(tenantId int, peerId string) error {
 	if err != nil {
 		return fmt.Errorf("unable to find network for tenant %d", tenantId)
 	}
+
+	// send notification peer removed
 
 	log.Printf("RevokeAddress: tenantId[%d], peer[%s], network[%s]", tenantId, peerId, tenant.Network)
 	return nil
