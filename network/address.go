@@ -13,7 +13,7 @@ type AddressService struct {
 }
 
 type AddressInterface interface {
-	AllocateAddress(tenantId int, peerId string, publicKey []byte) (*persistence.OnboardingResponse, error)
+	AllocateAddress(tenantId int, peerId string, publicKey []byte, peerAddr string) (*persistence.OnboardingResponse, error)
 	RevokeAddress(tenantId int, peerId string) error
 }
 
@@ -31,7 +31,7 @@ func NewAddressService(repo persistence.RepositoryInterface) AddressInterface {
 	for _, tenant := range tenants {
 		addressPool, _ := NewAddressPool(tenant.Network)
 		if err != nil {
-			log.Fatalf("unable to instantiate network pool for tenant [%s]", tenant.Id)
+			log.Fatalf("unable to instantiate network pool for tenant [%d]", tenant.Id)
 		}
 		// todo: query for all tenant peers and modify addressPool.used to reflect that the addresses are already in use.
 		service.tenantIdToAddressPool[tenant.Id] = addressPool
@@ -41,8 +41,8 @@ func NewAddressService(repo persistence.RepositoryInterface) AddressInterface {
 }
 
 // AllocateAddress todo: flow of this method is big - need to move some logic towards the controller
-func (a *AddressService) AllocateAddress(tenantId int, peerId string, publicKey []byte) (*persistence.OnboardingResponse, error) {
-	log.Printf("received allocation request: tenant [%s], peer [%s]", tenantId, peerId)
+func (a *AddressService) AllocateAddress(tenantId int, peerId string, publicKey []byte, peerAddr string) (*persistence.OnboardingResponse, error) {
+	log.Printf("received allocation request: tenant [%d], peer [%s]", tenantId, peerId)
 
 	// Check tenant exist
 	_, err := a.repo.ReadTenant(tenantId)
@@ -69,7 +69,7 @@ func (a *AddressService) AllocateAddress(tenantId int, peerId string, publicKey 
 		return nil, fmt.Errorf("failed to fetch peers for tenant %d - %s", tenantId, err)
 	}
 
-	peerDTO := persistence.Peer{Id: peerId, Address: address, PublicKey: publicKey}
+	peerDTO := persistence.Peer{Id: peerId, VAddr: address, RAddr: peerAddr, PublicKey: publicKey}
 	err = a.repo.WritePeer(tenantId, peerDTO)
 	if err != nil {
 		return nil, fmt.Errorf("failed to persist peer %s - %s", peer.Id, err)
@@ -94,6 +94,6 @@ func (a *AddressService) RevokeAddress(tenantId int, peerId string) error {
 		return fmt.Errorf("unable to find network for tenant %d", tenantId)
 	}
 
-	log.Printf("RevokeAddress: tenantId[%s], peer[%s], network[%s]", tenantId, peerId, tenant.Network)
+	log.Printf("RevokeAddress: tenantId[%d], peer[%s], network[%s]", tenantId, peerId, tenant.Network)
 	return nil
 }

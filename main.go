@@ -14,8 +14,11 @@ func main() {
 	repo := persistence.NewRepositoryService()
 	addressService := network.NewAddressService(repo)
 
-	addressService.AllocateAddress(1, "peer1", []byte("asda"))
-	addressService.AllocateAddress(1, "peer2", []byte("asdadsadaaa"))
-	response, _ := addressService.AllocateAddress(1, "peer3", []byte("asasdsad"))
+	addressService.AllocateAddress(1, "peer1", []byte("asda"), "1.1.1.1")
+	addressService.AllocateAddress(1, "peer2", []byte("asdadsadaaa"), "2.2.2.2")
+	response, _ := addressService.AllocateAddress(1, "peer3", []byte("asasdsad"), "3.3.3.3")
 	log.Println(response)
+
+	repo.DeletePeer(1, "peer1")
+	repo.DeletePeer(1, "peer3")
 }

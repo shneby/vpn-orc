@@ -2,7 +2,8 @@ package persistence
 
 type Peer struct {
 	Id        string `json:"id"`
-	Address   string `json:"address"`
+	VAddr     string `json:"virtualAddress"`
+	RAddr     string
 	PublicKey []byte `json:"publicKey"`
 }
 

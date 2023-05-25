@@ -17,6 +17,7 @@ type RepositoryInterface interface {
 	ReadPeer(tenantId int, peerId string) (*Peer, error)
 	ReadPeers(tenantId int) ([]Peer, error)
 	WritePeer(tenantId int, peer Peer) error
+	DeletePeer(tenantId int, peerId string) error
 }
 
 func NewRepositoryService() RepositoryInterface {
@@ -33,10 +34,10 @@ func NewRepositoryService() RepositoryInterface {
 func (r *RepositoryService) ReadTenant(tenantId int) (*Tenant, error) {
 	stmt, err := r.db.Prepare("SELECT * FROM tenants WHERE id = :tenantId")
 	if err != nil {
+		stmt.Close()
 		return nil, err
 	}
 
-	defer stmt.Close()
 	row := stmt.QueryRow(sql.Named("tenantId", tenantId))
 
 	tenant := &Tenant{}
@@ -45,7 +46,7 @@ func (r *RepositoryService) ReadTenant(tenantId int) (*Tenant, error) {
 		return nil, err
 	}
 
-	return tenant, nil
+	return tenant, stmt.Close()
 }
 
 func (r *RepositoryService) ReadTenants() ([]Tenant, error) {
@@ -69,7 +70,7 @@ func (r *RepositoryService) ReadPeer(tenantId int, peerId string) (*Peer, error)
 	row := r.db.QueryRow(query)
 	peer := &Peer{}
 
-	err := row.Scan(&peer.Id, &peer.Address, &peer.PublicKey)
+	err := row.Scan(&peer.Id, &peer.VAddr, &peer.PublicKey, &peer.RAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -83,25 +84,24 @@ func (r *RepositoryService) ReadPeers(tenantId int) ([]Peer, error) {
 	rows, err := r.db.Query(query)
 
 	if err != nil {
+		rows.Close()
 		return nil, err
 	}
-
-	defer rows.Close()
 
 	var peers []Peer
 
 	for rows.Next() {
 		var peer Peer
-		rows.Scan(&peer.Id, &peer.Address, &peer.PublicKey)
+		rows.Scan(&peer.Id, &peer.VAddr, &peer.PublicKey, &peer.RAddr)
 		peers = append(peers, peer)
 	}
 
-	return peers, nil
+	return peers, rows.Close()
 }
 
 func (r *RepositoryService) WritePeer(tenantId int, peer Peer) error {
 	tableName := fmt.Sprintf("t%d_peers", tenantId)
-	query := fmt.Sprintf("INSERT INTO '%s' (id, address, publicKey) VALUES (?, ?, ?)", tableName)
+	query := fmt.Sprintf("INSERT INTO '%s' (id, virtualAddress, publicKey, realAddress) VALUES (?, ?, ?, ?)", tableName)
 	stmt, err := r.db.Prepare(query)
 	defer stmt.Close()
 
@@ -109,7 +109,7 @@ func (r *RepositoryService) WritePeer(tenantId int, peer Peer) error {
 		return err
 	}
 
-	_, err = stmt.Exec(peer.Id, peer.Address, peer.PublicKey)
+	_, err = stmt.Exec(peer.Id, peer.VAddr, peer.PublicKey, peer.RAddr)
 	if err != nil {
 		return err
 	}
@@ -117,6 +117,20 @@ func (r *RepositoryService) WritePeer(tenantId int, peer Peer) error {
 	return nil
 }
 
-func (r *RepositoryService) DeletePeer(tenantId int, peerId string) (*Peer, error) {
-	return nil, nil
+func (r *RepositoryService) DeletePeer(tenantId int, peerId string) error {
+	tableName := fmt.Sprintf("t%d_peers", tenantId)
+	query := fmt.Sprintf("DELETE FROM '%s' WHERE id = :peerId", tableName)
+	stmt, err := r.db.Prepare(query)
+	defer stmt.Close()
+
+	if err != nil {
+		return err
+	}
+
+	_, err = stmt.Exec(sql.Named("peerId", peerId))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
