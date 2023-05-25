@@ -11,7 +11,7 @@ type Tenant struct {
 	Network string `json:"network"`
 }
 
-type OnboardingResponseDTO struct {
+type OnboardingResponse struct {
 	Address string `json:"address"`
 	Peers   []Peer `json:"peers"`
 }

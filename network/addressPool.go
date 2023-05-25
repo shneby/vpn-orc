@@ -1,6 +1,7 @@
 package network
 
-// todo: I'll need to refactor this
+// todo: TASK 	- refactor this code to match a single coherent style
+// todo: BUG 	- address pool assigns network & broadcast addresses
 
 import (
 	"fmt"

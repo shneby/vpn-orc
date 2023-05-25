@@ -14,7 +14,7 @@ type AddressService struct {
 }
 
 type AddressInterface interface {
-	AllocateAddress(tenantId string, peerId string, publicKey []byte) (*persistence.OnboardingResponseDTO, error)
+	AllocateAddress(tenantId string, peerId string, publicKey []byte) (*persistence.OnboardingResponse, error)
 	RevokeAddress(tenantId string, peerId string) error
 }
 
@@ -42,7 +42,7 @@ func NewAddressService(repo persistence.RepositoryInterface) AddressInterface {
 }
 
 // AllocateAddress todo: flow of this method is big - need to move some logic towards the controller
-func (a *AddressService) AllocateAddress(tenantId string, peerId string, publicKey []byte) (*persistence.OnboardingResponseDTO, error) {
+func (a *AddressService) AllocateAddress(tenantId string, peerId string, publicKey []byte) (*persistence.OnboardingResponse, error) {
 	log.Printf("received allocation request: tenant [%s], peer [%s]", tenantId, peerId)
 
 	// Check tenant exist
@@ -83,7 +83,7 @@ func (a *AddressService) AllocateAddress(tenantId string, peerId string, publicK
 	// todo: implement this
 
 	// return address response with allocated address to peer
-	return &persistence.OnboardingResponseDTO{
+	return &persistence.OnboardingResponse{
 		Address: address,
 		Peers:   peers,
 	}, nil

@@ -7,8 +7,7 @@ import (
 	"log"
 )
 
-// todo: try to change queries later to prevent sql injection.
-// 	Where ever you use variables as part of the string.
+// todo: all queries are exposed to sql injection due to the table name - changing tenantId to int will resolve this
 
 type RepositoryService struct {
 	db *sql.DB
