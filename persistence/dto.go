@@ -7,7 +7,7 @@ type Peer struct {
 }
 
 type Tenant struct {
-	Id      string `json:"id"`
+	Id      int    `json:"id"`
 	Network string `json:"network"`
 }
 

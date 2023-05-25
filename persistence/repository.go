@@ -7,18 +7,16 @@ import (
 	"log"
 )
 
-// todo: all queries are exposed to sql injection due to the table name - changing tenantId to int will resolve this
-
 type RepositoryService struct {
 	db *sql.DB
 }
 
 type RepositoryInterface interface {
-	ReadTenant(tenantId string) (*Tenant, error)
+	ReadTenant(tenantId int) (*Tenant, error)
 	ReadTenants() ([]Tenant, error)
-	ReadPeer(tenantId string, peerId string) (*Peer, error)
-	ReadPeers(tenantId string) ([]Peer, error)
-	WritePeer(tenantId string, peer Peer) error
+	ReadPeer(tenantId int, peerId string) (*Peer, error)
+	ReadPeers(tenantId int) ([]Peer, error)
+	WritePeer(tenantId int, peer Peer) error
 }
 
 func NewRepositoryService() RepositoryInterface {
@@ -32,12 +30,17 @@ func NewRepositoryService() RepositoryInterface {
 	}
 }
 
-func (r *RepositoryService) ReadTenant(tenantId string) (*Tenant, error) {
-	query := fmt.Sprintf("SELECT * FROM tenants WHERE id = '%s'", tenantId)
-	row := r.db.QueryRow(query)
-	tenant := &Tenant{}
+func (r *RepositoryService) ReadTenant(tenantId int) (*Tenant, error) {
+	stmt, err := r.db.Prepare("SELECT * FROM tenants WHERE id = :tenantId")
+	if err != nil {
+		return nil, err
+	}
 
-	err := row.Scan(&tenant.Id, &tenant.Network)
+	defer stmt.Close()
+	row := stmt.QueryRow(sql.Named("tenantId", tenantId))
+
+	tenant := &Tenant{}
+	err = row.Scan(&tenant.Id, &tenant.Network)
 	if err != nil {
 		return nil, err
 	}
@@ -60,8 +63,8 @@ func (r *RepositoryService) ReadTenants() ([]Tenant, error) {
 	return tenants, nil
 }
 
-func (r *RepositoryService) ReadPeer(tenantId string, peerId string) (*Peer, error) {
-	tableName := tenantId + "_peers"
+func (r *RepositoryService) ReadPeer(tenantId int, peerId string) (*Peer, error) {
+	tableName := fmt.Sprintf("t%d_peers", tenantId)
 	query := fmt.Sprintf("SELECT * FROM '%s' WHERE id = '%s'", tableName, peerId)
 	row := r.db.QueryRow(query)
 	peer := &Peer{}
@@ -74,8 +77,8 @@ func (r *RepositoryService) ReadPeer(tenantId string, peerId string) (*Peer, err
 	return peer, nil
 }
 
-func (r *RepositoryService) ReadPeers(tenantId string) ([]Peer, error) {
-	tableName := tenantId + "_peers"
+func (r *RepositoryService) ReadPeers(tenantId int) ([]Peer, error) {
+	tableName := fmt.Sprintf("t%d_peers", tenantId)
 	query := fmt.Sprintf("SELECT * FROM '%s'", tableName)
 	rows, err := r.db.Query(query)
 
@@ -96,8 +99,8 @@ func (r *RepositoryService) ReadPeers(tenantId string) ([]Peer, error) {
 	return peers, nil
 }
 
-func (r *RepositoryService) WritePeer(tenantId string, peer Peer) error {
-	tableName := tenantId + "_peers"
+func (r *RepositoryService) WritePeer(tenantId int, peer Peer) error {
+	tableName := fmt.Sprintf("t%d_peers", tenantId)
 	query := fmt.Sprintf("INSERT INTO '%s' (id, address, publicKey) VALUES (?, ?, ?)", tableName)
 	stmt, err := r.db.Prepare(query)
 	defer stmt.Close()
@@ -114,6 +117,6 @@ func (r *RepositoryService) WritePeer(tenantId string, peer Peer) error {
 	return nil
 }
 
-func (r *RepositoryService) DeletePeer(tenantId string, peerId string) (*Peer, error) {
+func (r *RepositoryService) DeletePeer(tenantId int, peerId string) (*Peer, error) {
 	return nil, nil
 }
