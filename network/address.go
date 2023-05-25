@@ -6,81 +6,71 @@ import (
 	"vpn-orc/persistence"
 )
 
-// The responsibilities of this services are as follows
-// Onboarding a peer/tenant
-// 1. The service assigns an address pool when a new tenant is introduced
-// 2. when a peer of a tenant is introduced the tenants pool is used to assign an ip address from that pool
-// 3. notifies an existing peers of the new peer
-// Offboarding a peer
-// 1. when a revoke is requested the service removes the peer, revokes the ip address and returns it to the network pool
-// 2. notifies via notification service that the peer was revoked
-
 type AddressService struct {
-	// Repository service (represented by two maps right now)
-	//addressPool     *DummyPool
-	tenantToNetwork map[string]*DummyPool
-	tenantToPeers   map[string][]persistence.Peer
+	repo                  persistence.RepositoryInterface
+	tenantIdToAddressPool map[string]*AddressPool
 	// Notification service
 }
 
 type AddressInterface interface {
-	AllocateAddress(tenantId string, peerId string, publicKey string) (string, error)
+	AllocateAddress(tenantId string, peerId string, publicKey string) error
 	RevokeAddress(tenantId string, peerId string) error
-	Main()
 }
 
-func NewAddressService() AddressInterface {
-	return &AddressService{
-		tenantToNetwork: make(map[string]*DummyPool),
-		tenantToPeers:   make(map[string][]persistence.Peer),
-	}
-}
-
-func (a *AddressService) AllocateAddress(tenantId string, peerId string, publicKey string) (string, error) { // todo: implement peer type
-
-	if a.tenantToNetwork[tenantId] == nil {
-		a.tenantToNetwork[tenantId] = NewDummyPool("192.168.1.0/24") // todo: this needs to be randomly generated somehow
-	}
-
-	tenantNetwork := a.tenantToNetwork[tenantId]
-	address, err := tenantNetwork.AllocateIP()
+func NewAddressService(repo persistence.RepositoryInterface) AddressInterface {
+	tenants, err := repo.ReadTenants()
 	if err != nil {
-		return "", err
+		log.Fatalf("Unable to retreive tenants")
 	}
 
-	log.Printf("Allocating address [%s] to peer [%s] over tenant [%s]", address, peerId, tenantId)
-	return address, nil
+	service := &AddressService{
+		repo:                  repo,
+		tenantIdToAddressPool: make(map[string]*AddressPool),
+	}
+
+	for _, tenant := range tenants {
+		addressPool, _ := NewAddressPool(tenant.Network)
+		if err != nil {
+			log.Fatalf("Unable to instantiate network pool for tenant [%s]", tenant.Id)
+		}
+		// todo: query for all tenant peers and modify addressPool.used to reflect that the addresses are already in use.
+		service.tenantIdToAddressPool[tenant.Id] = addressPool
+		log.Printf("Allocating new address pool [%s] for tenant [%s]", tenant.Network, tenant.Id)
+	}
+
+	return service
 }
 
-func (a *AddressService) RevokeAddress(tenantId string, peerId string) error {
+func (a *AddressService) AllocateAddress(tenantId string, peerId string, publicKey string) error {
 
-	if a.tenantToNetwork[tenantId] == nil {
-		return errors.New("tenant " + tenantId + " has no allocated networks")
-	}
-
-	tenantNetwork := a.tenantToNetwork[tenantId]
-	peerAddress := "192.168.1.1"
-
-	err := tenantNetwork.DeallocateIP(peerAddress)
+	// Check tenant exist
+	tenant, err := a.repo.ReadTenant(tenantId)
 	if err != nil {
-		return err
+		return errors.New("Unable to find tenant " + tenantId)
 	}
 
-	log.Println("Revoking address from connection pool")
-	log.Println("Persist to database")
-	log.Println("Read peers belonging tenantId from database")
-	log.Println("Send notification to all peers on removed peer")
+	// Check peer exists on tenant
 
+	// Create new peer object and write to db
+
+	// Add peer entry to health service
+
+	// get all tenant peers
+
+	// send notification peer joined
+
+	// return address response with allocated address to peer
+
+	log.Printf("Allocating network address for peer %s\n", tenant)
 	return nil
 }
 
-func (a *AddressService) Main() {
-	a.AllocateAddress("tenant1", "peer1", "adsada")
-	a.AllocateAddress("tenant1", "peer1", "adsada")
-	a.AllocateAddress("tenant2", "peer1", "adsada")
-
-	err := a.RevokeAddress("tenant1", "peer1")
+func (a *AddressService) RevokeAddress(tenantId string, peerId string) error {
+	tenant, err := a.repo.ReadTenant(tenantId)
 	if err != nil {
-		log.Println(err)
+		return errors.New("Unable to find network for tenant " + tenantId)
 	}
+
+	log.Printf("RevokeAddress: tenantId[%s], peer[%s], network[%s]", tenantId, peerId, tenant.Network)
+	return nil
 }
