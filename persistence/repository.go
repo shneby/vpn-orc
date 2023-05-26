@@ -22,6 +22,7 @@ type RepositoryInterface interface {
 }
 
 func NewRepositoryService() RepositoryInterface {
+	// real production scenario will have option to connect to a real database
 	db, err := sql.Open("sqlite3", "resources/local.db")
 	if err != nil {
 		log.Fatal("Failed to establish database connection")
