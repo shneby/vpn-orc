@@ -9,8 +9,8 @@ import (
 	"vpn-orc/persistence"
 )
 
-// AllocateAddress todo: flow of this method is big - need to move some logic towards the controller
-// RevokeAddress todo: this flow can be improved by adding simple (exists) query to the database
+// OnboardPeer todo: flow of this method is big - need to move some logic towards the controller
+// OffboardPeer todo: this flow can be improved by adding simple (exists) query to the database
 
 type OrchestratorService struct {
 	repo                  persistence.RepositoryInterface
@@ -20,8 +20,9 @@ type OrchestratorService struct {
 }
 
 type OrchestratorInterface interface {
-	AllocateAddress(tenantId int, peerId string, publicKey []byte, peerAddr string) (*persistence.OnboardingResponse, error)
-	RevokeAddress(tenantId int, peerId string) error
+	OnboardPeer(tenantId int, peerId string, publicKey []byte, peerAddr string) (*persistence.OnboardingResponse, error)
+	OffboardPeer(tenantId int, peerId string) error
+	UpdatePeer(tenantId int, peerId string)
 }
 
 func NewOrchestratorService(repo persistence.RepositoryInterface, notifier NotificationInterface) OrchestratorInterface {
@@ -49,7 +50,7 @@ func NewOrchestratorService(repo persistence.RepositoryInterface, notifier Notif
 
 	// schedule tasks
 	c := cron.New()
-	err = c.AddFunc("* * * * * *", service.checkPeersToRemove)
+	err = c.AddFunc("* * * * *", service.checkPeersToRemove)
 	if err != nil {
 		log.Fatalf("Failed to schedule c job %s", err)
 	}
@@ -57,7 +58,7 @@ func NewOrchestratorService(repo persistence.RepositoryInterface, notifier Notif
 	return service
 }
 
-func (o *OrchestratorService) AllocateAddress(tenantId int, peerId string, publicKey []byte, peerAddr string) (*persistence.OnboardingResponse, error) {
+func (o *OrchestratorService) OnboardPeer(tenantId int, peerId string, publicKey []byte, peerAddr string) (*persistence.OnboardingResponse, error) {
 	log.Printf("received allocation request: tenant [%d], peer [%s]", tenantId, peerId)
 
 	// Check tenant exist
@@ -92,7 +93,7 @@ func (o *OrchestratorService) AllocateAddress(tenantId int, peerId string, publi
 	}
 
 	// Update in health service & notify
-	o.updatePeer(tenantId, peerId)
+	o.UpdatePeer(tenantId, peerId)
 	o.notifier.NotifyConnected(peerDTO, peers)
 
 	// return address response with allocated address to peer
@@ -102,7 +103,7 @@ func (o *OrchestratorService) AllocateAddress(tenantId int, peerId string, publi
 	}, nil
 }
 
-func (o *OrchestratorService) RevokeAddress(tenantId int, peerId string) error {
+func (o *OrchestratorService) OffboardPeer(tenantId int, peerId string) error {
 	// check tenant exists
 	tenant, err := o.repo.ReadTenant(tenantId)
 	if err != nil {
@@ -143,11 +144,11 @@ func (o *OrchestratorService) RevokeAddress(tenantId int, peerId string) error {
 	// send notification peer removed
 	o.notifier.NotifyDisconnected(peerToRemove, peers)
 
-	log.Printf("RevokeAddress: tenantId[%d], peer[%s], network[%s]", tenantId, peerId, tenant.Network)
+	log.Printf("OffboardPeer: tenantId[%d], peer[%s], network[%s]", tenantId, peerId, tenant.Network)
 	return nil
 }
 
-func (o *OrchestratorService) updatePeer(tenantId int, peerId string) {
+func (o *OrchestratorService) UpdatePeer(tenantId int, peerId string) {
 	now := time.Now().UnixMilli()
 	if o.tenantIdToPeerIdMap[tenantId] == nil {
 		o.tenantIdToPeerIdMap[tenantId] = make(map[string]int64)
@@ -164,6 +165,8 @@ func (o *OrchestratorService) checkPeersToRemove() {
 	for tenant, peerToTimestamp := range o.tenantIdToPeerIdMap {
 		for peerId, timestamp := range peerToTimestamp {
 			delta := now.UnixMilli() - timestamp
+
+			// todo: floating number -> change it
 			if delta > 10000 {
 				peersToRemove[tenant] = peerId
 			}
@@ -172,6 +175,6 @@ func (o *OrchestratorService) checkPeersToRemove() {
 
 	for tenantId, peerId := range peersToRemove {
 		delete(o.tenantIdToPeerIdMap[tenantId], peerId)
-		o.RevokeAddress(tenantId, peerId)
+		o.OffboardPeer(tenantId, peerId)
 	}
 }
