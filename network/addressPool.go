@@ -6,6 +6,8 @@ import (
 	"net"
 )
 
+// note: The address pool pre-allocates the entire mask range - given more time we should implement sparse allocation
+
 type AddressPool struct {
 	cidr    *net.IPNet
 	avail   stack.Stack

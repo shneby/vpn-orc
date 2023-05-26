@@ -36,7 +36,6 @@ func (a *ApiGateway) registerPeer(w http.ResponseWriter, request *http.Request) 
 		return
 	}
 
-	// todo: theres a better way to do this
 	if o.TenantId == 0 || o.PublicKey == "" || o.Id == "" || o.Addr == "" {
 		http.Error(w, "Invalid / Empty fields in request", http.StatusBadRequest)
 		return
@@ -56,13 +55,27 @@ func (a *ApiGateway) registerPeer(w http.ResponseWriter, request *http.Request) 
 	}
 }
 
-func (a *ApiGateway) heartbeat(w http.ResponseWriter, r *http.Request) {
+func (a *ApiGateway) heartbeat(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	// run orchestrator UpdatePeer
+
+	var h persistence.HeartbeatRequest
+	dec := json.NewDecoder(request.Body)
+	dec.DisallowUnknownFields()
+
+	err := dec.Decode(&h)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if h.TenantId == 0 || h.Id == "" {
+		http.Error(w, "Invalid / Empty fields in request", http.StatusBadRequest)
+		return
+	}
+	a.orchestrator.UpdatePeer(h.TenantId, h.Id)
 }
 
-func status(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+func status(w http.ResponseWriter, request *http.Request) {
 	fmt.Fprintf(w, "application is running.")
 }
 

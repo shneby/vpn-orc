@@ -23,3 +23,8 @@ type OnboardingRequest struct {
 	PublicKey string `json:"publicKey"`
 	Addr      string `json:"address"`
 }
+
+type HeartbeatRequest struct {
+	Id       string `json:"id"`
+	TenantId int    `json:"tenantId"`
+}

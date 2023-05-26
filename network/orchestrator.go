@@ -9,9 +9,6 @@ import (
 	"vpn-orc/persistence"
 )
 
-// OnboardPeer todo: flow of this method is big - need to move some logic towards the controller
-// OffboardPeer todo: this flow can be improved by adding simple (exists) query to the database
-
 type OrchestratorService struct {
 	repo                  persistence.RepositoryInterface
 	notifier              NotificationInterface
@@ -39,7 +36,7 @@ func NewOrchestratorService(repo persistence.RepositoryInterface, notifier Notif
 	}
 
 	// create address pools
-	// todo: optional - load from database
+	// note: in production scenario we would load the network pools state from the database
 	for _, tenant := range tenants {
 		addressPool, _ := NewAddressPool(tenant.Network)
 		if err != nil {
@@ -48,11 +45,11 @@ func NewOrchestratorService(repo persistence.RepositoryInterface, notifier Notif
 		service.tenantIdToAddressPool[tenant.Id] = addressPool
 	}
 
-	// schedule tasks
+	// schedule scan for peers to remove every minute
 	c := cron.New()
-	err = c.AddFunc("* * * * *", service.checkPeersToRemove)
+	err = c.AddFunc("0 * * * * *", service.checkPeersToRemove)
 	if err != nil {
-		log.Fatalf("Failed to schedule c job %s", err)
+		log.Fatalf("failed to schedule cron job %s", err)
 	}
 	c.Start()
 	return service
@@ -93,6 +90,7 @@ func (o *OrchestratorService) OnboardPeer(tenantId int, peerId string, publicKey
 	}
 
 	// Update in health service & notify
+	// Note: Notifications are done synchronously - Given more time we should implement an event system between the orchestrator & notifier
 	o.UpdatePeer(tenantId, peerId)
 	o.notifier.NotifyConnected(peerDTO, peers)
 
@@ -149,6 +147,7 @@ func (o *OrchestratorService) OffboardPeer(tenantId int, peerId string) error {
 }
 
 func (o *OrchestratorService) UpdatePeer(tenantId int, peerId string) {
+	// if peer doesn't exist we should send out a 401 so it can reconnect
 	now := time.Now().UnixMilli()
 	if o.tenantIdToPeerIdMap[tenantId] == nil {
 		o.tenantIdToPeerIdMap[tenantId] = make(map[string]int64)
@@ -159,14 +158,13 @@ func (o *OrchestratorService) UpdatePeer(tenantId int, peerId string) {
 }
 
 func (o *OrchestratorService) checkPeersToRemove() {
+	log.Println("ping")
 	now := time.Now()
 	peersToRemove := make(map[int]string)
 
 	for tenant, peerToTimestamp := range o.tenantIdToPeerIdMap {
 		for peerId, timestamp := range peerToTimestamp {
 			delta := now.UnixMilli() - timestamp
-
-			// todo: floating number -> change it
 			if delta > 10000 {
 				peersToRemove[tenant] = peerId
 			}
