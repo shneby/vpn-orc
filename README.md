@@ -52,12 +52,13 @@ an external process. The expectation being that the database already has tables 
     ![peers](./resources/peers-table.png)
 
 2. The database is set locally - in real world environment we would naturally use an external database which is scalable.
-3. There is currently coupling between the orchestration & notification components
+3. There is currently coupling between the orchestration & notification components,
 given more time I would have suggested a design that incorporates an event bus between them.
 4. The addressPool implementation currently pre-allocates all addresses ahead of time and saves them in a stack.
 this will be a problem in real world system that may want to allocate class A networks.
 In a production system a more sparse implementation should be used.
-5. The notification service has a code segment which is commented out.
+5. The notification service has a code segment which is commented out,
 This is to prevent every notification request from timing out while evaluating the exercise.
 In a real world scenario this would obviously not be commented.
+6. There are no tests with code, this was done due to time constraints, obviously production code will require comprehensive testing.
 <hr/>

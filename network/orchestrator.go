@@ -158,7 +158,6 @@ func (o *OrchestratorService) UpdatePeer(tenantId int, peerId string) {
 }
 
 func (o *OrchestratorService) checkPeersToRemove() {
-	log.Println("ping")
 	now := time.Now()
 	peersToRemove := make(map[int]string)
 
