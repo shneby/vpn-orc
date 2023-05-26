@@ -159,19 +159,21 @@ func (o *OrchestratorService) UpdatePeer(tenantId int, peerId string) {
 
 func (o *OrchestratorService) checkPeersToRemove() {
 	now := time.Now()
-	peersToRemove := make(map[int]string)
+	peersToRemove := make(map[int][]string)
 
 	for tenant, peerToTimestamp := range o.tenantIdToPeerIdMap {
 		for peerId, timestamp := range peerToTimestamp {
 			delta := now.UnixMilli() - timestamp
-			if delta > 10000 {
-				peersToRemove[tenant] = peerId
+			if delta > 60000 {
+				peersToRemove[tenant] = append(peersToRemove[tenant], peerId)
 			}
 		}
 	}
 
-	for tenantId, peerId := range peersToRemove {
-		delete(o.tenantIdToPeerIdMap[tenantId], peerId)
-		o.OffboardPeer(tenantId, peerId)
+	for tenantId, peers := range peersToRemove {
+		for _, peerId := range peers {
+			delete(o.tenantIdToPeerIdMap[tenantId], peerId)
+			o.OffboardPeer(tenantId, peerId)
+		}
 	}
 }
