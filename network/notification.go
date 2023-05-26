@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 	"vpn-orc/persistence"
 )
 
 type NotificationEvent int64
 
-type Notification struct {
+type NotificationMessage struct {
 	EventType NotificationEvent `json:"eventType"`
 	Peer      persistence.Peer  `json:"peer"`
 }
@@ -35,7 +34,7 @@ func NewNotificationService() NotificationInterface {
 }
 
 func (n NotificationService) NotifyConnected(peer persistence.Peer, peers []persistence.Peer) error {
-	notification := Notification{
+	notification := NotificationMessage{
 		EventType: Connected,
 		Peer:      peer,
 	}
@@ -43,14 +42,14 @@ func (n NotificationService) NotifyConnected(peer persistence.Peer, peers []pers
 }
 
 func (n NotificationService) NotifyDisconnected(peer persistence.Peer, peers []persistence.Peer) error {
-	notification := Notification{
+	notification := NotificationMessage{
 		EventType: Disconnected,
 		Peer:      peer,
 	}
 	return notify(notification, peers)
 }
 
-func notify(notification Notification, peers []persistence.Peer) error {
+func notify(notification NotificationMessage, peers []persistence.Peer) error {
 	for _, p := range peers {
 		url := "https://" + p.RAddr + "/notify"
 		marsh, err := json.Marshal(notification)
@@ -66,13 +65,16 @@ func notify(notification Notification, peers []persistence.Peer) error {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer secret")
 
-		client := http.Client{Timeout: 3 * time.Second}
-		res, err := client.Do(req)
-		if err != nil {
-			return fmt.Errorf("failed sending notificaiton request: %s", err)
-		}
+		log.Printf("Notify peer %s NotificationMessage sent: %v", p.Id, notification)
 
-		log.Printf("status Code: %d", res.StatusCode)
+		// todo: enable later
+		//client := http.Client{Timeout: 3 * time.Second}
+		//res, err := client.Do(req)
+		//if err != nil {
+		//	return fmt.Errorf("failed sending notificaiton request: %s", err)
+		//}
+
+		//log.Printf("status Code: %d", res.StatusCode)
 	}
 	return nil
 }

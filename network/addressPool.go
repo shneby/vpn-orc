@@ -1,15 +1,14 @@
 package network
 
-// todo: TASK 	- refactor this code to match a single coherent style
-// todo: BUG 	- address pool assigns network & broadcast addresses
-
 import (
 	"fmt"
+	"github.com/golang-collections/collections/stack"
 	"net"
 )
 
 type AddressPool struct {
 	cidr    *net.IPNet
+	avail   stack.Stack
 	used    map[string]bool
 	network *net.IPNet
 }
@@ -21,36 +20,50 @@ func NewAddressPool(cidr string) (*AddressPool, error) {
 	}
 
 	used := make(map[string]bool)
-	return &AddressPool{
+	pool := &AddressPool{
 		cidr:    ipNet,
+		avail:   stack.Stack{},
 		used:    used,
 		network: ipNet,
-	}, nil
+	}
+	pool.generateAddresses()
+	return pool, nil
+}
+
+func (ap *AddressPool) generateAddresses() {
+	ip := ap.network.IP.Mask(ap.network.Mask)
+
+	ip = nextIP(ip) // skip the network address
+	for ap.network.Contains(ip) {
+		ap.avail.Push(ip)
+		ip = nextIP(ip)
+	}
+	ap.avail.Pop() // pop the broadcast address from the stack
+}
+
+func nextIP(ip net.IP) net.IP {
+	i := ip.To4()                                                     // break down the ip address to a 4 cell []byte
+	v := uint(i[0])<<24 + uint(i[1])<<16 + uint(i[2])<<8 + uint(i[3]) // convert to a uint and bit shift each cell to it's octet location
+	v++                                                               // Increment the resulting number by one
+	v3 := byte(v & 0xFF)                                              // break down each octet
+	v2 := byte((v >> 8) & 0xFF)
+	v1 := byte((v >> 16) & 0xFF)
+	v0 := byte((v >> 24) & 0xFF)
+	return net.IPv4(v0, v1, v2, v3) // recreate the address as an inet.IP
 }
 
 func (ap *AddressPool) AllocateAddress() (string, error) {
-	for ip := ap.network.IP.Mask(ap.network.Mask); ap.network.Contains(ip); incrementIP(ip) {
-		ipString := ip.String()
-		if !ap.used[ipString] {
-			ap.used[ipString] = true
-			return ip.String(), nil
-		}
+	if ap.avail.Len() == 0 {
+		return "", fmt.Errorf("no available addresses in the pool")
 	}
-
-	return "", fmt.Errorf("no available addresses in the pool")
+	ipString := fmt.Sprint(ap.avail.Pop())
+	ap.used[ipString] = true
+	return ipString, nil
 }
 
 func (ap *AddressPool) DeallocateAddress(address string) {
 	if ap.used[address] {
+		ap.avail.Push(net.ParseIP(address))
 		delete(ap.used, address)
-	}
-}
-
-func incrementIP(ip net.IP) {
-	for j := len(ip) - 1; j >= 0; j-- {
-		ip[j]++
-		if ip[j] > 0 {
-			break
-		}
 	}
 }
