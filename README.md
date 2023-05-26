@@ -44,7 +44,8 @@ The application is now available on localhost:8080
 
 <a name="notes"></a>
 ## Notes
-When reviewing the code please take into account go isn't my main language and I had to learn as I go (no pun intended)
+
+Syntax & best practices could be improved - golang isn't my main language but I felt it's important to write this in fully in go.
 1. The application is written with the assumption that oboarding a tenant is done via
 an external process. The expectation being that the database already has tables that look like:
 
