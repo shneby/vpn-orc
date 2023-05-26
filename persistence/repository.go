@@ -22,7 +22,7 @@ type RepositoryInterface interface {
 }
 
 func NewRepositoryService() RepositoryInterface {
-	db, err := sql.Open("sqlite3", "local.db")
+	db, err := sql.Open("sqlite3", "resources/local.db")
 	if err != nil {
 		log.Fatal("Failed to establish database connection")
 	}
