@@ -68,6 +68,7 @@ func notify(notification NotificationMessage, peers []persistence.Peer) error {
 		log.Printf("Notify peer %s NotificationMessage sent: %v", p.Id, notification)
 
 		// as the real ips for this exercise are not really reachable this code is commented out.
+
 		//client := http.Client{Timeout: 3 * time.Second}
 		//res, err := client.Do(req)
 		//if err != nil {

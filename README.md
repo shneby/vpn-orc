@@ -1,12 +1,15 @@
 # vpn-orc
-<p>A small vpn orchestration service</p>
+Small vpn orchestration service
+<pre>
+Please make sure to read the exercise notes.
+</pre>
 <hr/>
 
 ## Contents
 1. [Diagram](#diagram)
 2. [Build](#build)
 3. [Request Examples](#request)
-4. [Development Notes](#notes)
+4. [Exercise Notes](#notes)
 
 <a name="diagram"></a>
 ## Diagram
@@ -41,6 +44,7 @@ The application is now available on localhost:8080
 
 <a name="notes"></a>
 ## Notes
+When reviewing the code please take into account go isn't my main language and I had to learn as I go (no pun intended)
 1. The application is written with the assumption that oboarding a tenant is done via
 an external process. The expectation being that the database already has tables that look like:
 
@@ -53,4 +57,7 @@ given more time I would have suggested a design that incorporates an event bus b
 4. The addressPool implementation currently pre-allocates all addresses ahead of time and saves them in a stack.
 this will be a problem in real world system that may want to allocate class A networks.
 In a production system a more sparse implementation should be used.
+5. The notification service has a code segment which is commented out.
+This is to prevent every notification request from timing out while evaluating the exercise.
+In a real world scenario this would obviously not be commented.
 <hr/>

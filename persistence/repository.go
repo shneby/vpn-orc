@@ -18,7 +18,6 @@ type RepositoryInterface interface {
 	ReadPeers(tenantId int) ([]Peer, error)
 	WritePeer(tenantId int, peer Peer) error
 	DeletePeer(tenantId int, peerId string) error
-	Close()
 }
 
 func NewRepositoryService() RepositoryInterface {
@@ -135,12 +134,4 @@ func (r *RepositoryService) DeletePeer(tenantId int, peerId string) error {
 	}
 
 	return nil
-}
-
-func (r *RepositoryService) Close() {
-	log.Println("closing database connection")
-	err := r.db.Close()
-	if err != nil {
-		log.Printf("Failed to close db connection - %s", err)
-	}
 }

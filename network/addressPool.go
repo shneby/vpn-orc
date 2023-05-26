@@ -35,12 +35,14 @@ func NewAddressPool(cidr string) (*AddressPool, error) {
 func (ap *AddressPool) generateAddresses() {
 	ip := ap.network.IP.Mask(ap.network.Mask)
 
-	ip = nextIP(ip) // skip the network address
+	// skip the network address
+	ip = nextIP(ip)
 	for ap.network.Contains(ip) {
 		ap.avail.Push(ip)
 		ip = nextIP(ip)
 	}
-	ap.avail.Pop() // pop the broadcast address from the stack
+	// skip the broadcast address
+	ap.avail.Pop()
 }
 
 func nextIP(ip net.IP) net.IP {
