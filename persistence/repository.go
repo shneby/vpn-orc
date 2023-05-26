@@ -67,8 +67,11 @@ func (r *RepositoryService) ReadTenants() ([]Tenant, error) {
 
 func (r *RepositoryService) ReadPeer(tenantId int, peerId string) (*Peer, error) {
 	tableName := fmt.Sprintf("t%d_peers", tenantId)
-	query := fmt.Sprintf("SELECT * FROM '%s' WHERE id = '%s'", tableName, peerId)
-	row := r.db.QueryRow(query)
+	query := fmt.Sprintf("SELECT * FROM '%s' WHERE id = :peerId", tableName)
+	stmt, _ := r.db.Prepare(query)
+	defer stmt.Close()
+
+	row := stmt.QueryRow(sql.Named("peerId", peerId))
 	peer := &Peer{}
 
 	err := row.Scan(&peer.Id, &peer.VAddr, &peer.PublicKey, &peer.RAddr)
